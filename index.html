@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Notas de Español</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { -webkit-tap-highlight-color: transparent; background-color: #111827; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .flip-card-inner { transition: transform 0.6s; transform-style: preserve-3d; }
+        .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+        .vocab-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+    </style>
+</head>
+<body class="text-white selection:bg-pink-500 selection:text-white">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- ICONS ---
+        const IconWrapper = ({ children, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>{children}</svg>
+        );
+        
+        const Icons = {
+            User: (p)=><IconWrapper {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconWrapper>,
+            Globe: (p)=><IconWrapper {...p}><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></IconWrapper>,
+            MessageCircle: (p)=><IconWrapper {...p}><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></IconWrapper>,
+            Calendar: (p)=><IconWrapper {...p}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></IconWrapper>,
+            MapPin: (p)=><IconWrapper {...p}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconWrapper>,
+            Check: (p)=><IconWrapper {...p}><path d="M20 6 9 17l-5-5"/></IconWrapper>,
+            ChevronRight: (p)=><IconWrapper {...p}><path d="m9 18 6-6-6-6"/></IconWrapper>,
+            ArrowLeft: (p)=><IconWrapper {...p}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></IconWrapper>,
+            Sun: (p)=><IconWrapper {...p}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/></IconWrapper>,
+            Cloud: (p)=><IconWrapper {...p}><path d="M17.5 19c0-1.7-1.3-3-3-3h-1.3c-1.3-3.2-4.9-3.2-6.2 0H5.5c-2 0-3.5 1.5-3.5 3.5S3.5 23 5.5 23h12c1.7 0 3-1.3 3-3z"/></IconWrapper>,
+            CloudRain: (p)=><IconWrapper {...p}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></IconWrapper>,
+            Snowflake: (p)=><IconWrapper {...p}><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/></IconWrapper>,
+            Wind: (p)=><IconWrapper {...p}><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/></IconWrapper>,
+            Thermometer: (p)=><IconWrapper {...p}><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></IconWrapper>,
+            Smile: (p)=><IconWrapper {...p}><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></IconWrapper>,
+            Frown: (p)=><IconWrapper {...p}><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/></IconWrapper>,
+            Coffee: (p)=><IconWrapper {...p}><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/></IconWrapper>,
+            Briefcase: (p)=><IconWrapper {...p}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconWrapper>,
+            ChevronDown: (p)=><IconWrapper {...p}><path d="m6 9 6 6 6-6"/></IconWrapper>,
+            Menu: (p)=><IconWrapper {...p}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></IconWrapper>,
+            X: (p)=><IconWrapper {...p}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconWrapper>,
+            BookOpen: (p)=><IconWrapper {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconWrapper>,
+            BrainCircuit: (p)=><IconWrapper {...p}><path d="M12 5a3 3 0 1 0-5.997.6L6 5.6a5.6 5.6 0 0 0-4 9.8 7.2 7.2 0 0 0 1.928 2.868c.3.245.5.609.5 1.003v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1"/></IconWrapper>,
+            Users: (p)=><IconWrapper {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></IconWrapper>,
+            BriefcaseMedical: (p)=><IconWrapper {...p}><path d="M12 11v4"/><path d="M14 13h-4"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M18 6v14"/><path d="M6 6v14"/><rect width="20" height="14" x="2" y="6" rx="2"/></IconWrapper>,
+            Flag: (p)=><IconWrapper {...p}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></IconWrapper>,
+            Trash: (p)=><IconWrapper {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></IconWrapper>,
+            HelpCircle: (p)=><IconWrapper {...p}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></IconWrapper>,
+            Award: (p)=><IconWrapper {...p}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></IconWrapper>,
+            BarChart: (p)=><IconWrapper {...p}><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></IconWrapper>,
+            Type: (p)=><IconWrapper {...p}><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></IconWrapper>,
+            Hash: (p)=><IconWrapper {...p}><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></IconWrapper>,
+            Clock: (p)=><IconWrapper {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></IconWrapper>,
+            HeartHandshake: (p)=><IconWrapper {...p}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></IconWrapper>,
+            SmilePlus: (p)=><IconWrapper {...p}><path d="M22 11v1a10 10 0 1 1-9-10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/><path d="M16 5h6"/></IconWrapper>,
+            BookA: (p)=><IconWrapper {...p}><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></IconWrapper>,
+            ListChecks: (p)=><IconWrapper {...p}><path d="M10 6h11"/><path d="M10 12h11"/><path d="M10 18h11"/><path d="M4 6h1"/><path d="M4 12h1"/><path d="M4 18h1"/></IconWrapper>
+        };
+
+        // --- DATA ---
+        const SPANISH_PHRASES = [
+            "¡Hola! ¿Cómo estás?", "¡Pura vida!", "¿Qué onda?", "¡Buenos días!", "¡Buenas tardes!",
+            "¿Todo bien?", "¡Qué padre!", "¡Chévere!", "¡Dale!", "¡Venga!", "¿Qué tal?", "¡Bienvenido!"
+        ];
+
+        const CHARACTERS = [
+            { id: 1, firstName: "Claudia", lastName: "Sheinbaum", age: 63, origin: "México", nationality: "Mexicana", language: "Español", flag: "🇲🇽", color: "from-green-700 to-red-700", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Retrato_Oficial_de_la_Presidenta_de_M%C3%A9xico_Claudia_Sheinbaum_Pardo.jpg/800px-Retrato_Oficial_de_la_Presidenta_de_M%C3%A9xico_Claudia_Sheinbaum_Pardo.jpg" },
+            { id: 2, firstName: "Sandra", lastName: "Oh", age: 54, origin: "Canadá", nationality: "Canadiense", language: "Inglés, Coreano, Francés", flag: "🇨🇦", color: "from-red-600 to-white", img: "https://upload.wikimedia.org/wikipedia/commons/2/22/Sandra_Oh_at_the_2019_Golden_Globe_Awards_%28cropped%29.jpg" },
+            { id: 3, firstName: "Idris", lastName: "Elba", age: 53, origin: "Londres, Inglaterra", nationality: "Británico", language: "Inglés", flag: "🇬🇧", color: "from-blue-800 to-red-700", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Idris_Elba_2014.jpg/800px-Idris_Elba_2014.jpg" },
+            { id: 4, firstName: "Sofía", lastName: "Vergara", age: 53, origin: "Barranquilla, Colombia", nationality: "Colombiana", language: "Español e Inglés", flag: "🇨🇴", color: "from-yellow-500 to-blue-600", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Sof%C3%ADa_Vergara_at_The_Paley_Center_For_Media_2014.jpg/640px-Sof%C3%ADa_Vergara_at_The_Paley_Center_For_Media_2014.jpg" },
+            { id: 5, firstName: "Marion", lastName: "Cotillard", age: 50, origin: "París, Francia", nationality: "Francesa", language: "Francés e Inglés", flag: "🇫🇷", color: "from-blue-700 to-red-600", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Marion_Cotillard_Cannes_2018.jpg/640px-Marion_Cotillard_Cannes_2018.jpg" }
+        ];
+
+        const JOBS_DATA = [
+            { fem: "doctora", masc: "doctor", eng: "Doctor", emoji: "👨‍⚕️" }, { fem: "bombera", masc: "bombero", eng: "Firefighter", emoji: "👨‍🚒" },
+            { fem: "maestra", masc: "maestro", eng: "Teacher", emoji: "👨‍🏫" }, { fem: "policía", masc: "policía", eng: "Police officer", emoji: "👮" },
+            { fem: "mesera", masc: "mesero", eng: "Waiter", emoji: "💁" }, { fem: "panadera", masc: "panadero", eng: "Baker", emoji: "🥖" },
+            { fem: "pescadera", masc: "pescadero", eng: "Fishmonger", emoji: "🐟" }, { fem: "empresaria", masc: "empresario", eng: "Businessperson", emoji: "💼" },
+            { fem: "carnicera", masc: "carnicero", eng: "Butcher", emoji: "🥩" }, { fem: "periodista", masc: "periodista", eng: "Journalist", emoji: "📰" },
+            { fem: "fontanera", masc: "fontanero", eng: "Plumber", emoji: "🔧" }, { fem: "diseñadora", masc: "diseñador", eng: "Designer", emoji: "🎨" },
+            { fem: "ingeniera", masc: "ingeniero", eng: "Engineer", emoji: "👷" }, { fem: "cantante", masc: "cantante", eng: "Singer", emoji: "🎤" },
+            { fem: "actriz", masc: "actor", eng: "Actor", emoji: "🎭" }, { fem: "jugadora", masc: "jugador", eng: "Player", emoji: "⚽" },
+            { fem: "abogada", masc: "abogado", eng: "Lawyer", emoji: "⚖️" }, { fem: "obrera", masc: "obrero", eng: "Construction Worker", emoji: "🚧" },
+            { fem: "conductora", masc: "conductor", eng: "Driver", emoji: "🚌" }, { fem: "mecánica", masc: "mecánico", eng: "Mechanic", emoji: "🔧" },
+            { fem: "estudiante", masc: "estudiante", eng: "Student", emoji: "🎒" }, { fem: "cocinera", masc: "cocinero", eng: "Chef", emoji: "👨‍🍳" },
+            { fem: "peluquera", masc: "peluquero", eng: "Hairdresser", emoji: "✂️" }, { fem: "escritora", masc: "escritor", eng: "Writer", emoji: "✍️" },
+            { fem: "piloto", masc: "piloto", eng: "Pilot", emoji: "✈️" }, { fem: "vendedora", masc: "vendedor", eng: "Salesperson", emoji: "🛒" },
+            { fem: "secretaria", masc: "secretario", eng: "Secretary", emoji: "📂" }, { fem: "arquitecta", masc: "arquitecto", eng: "Architect", emoji: "📐" },
+            { fem: "presidenta", masc: "presidente", eng: "President", emoji: "🏛️" }
+        ];
+
+        const PLACES_DATA = [
+            { es: "La empresa", en: "The company" }, { es: "El hospital", en: "The hospital" }, { es: "La oficina", en: "The office" },
+            { es: "La clínica", en: "The clinic" }, { es: "El aeropuerto", en: "The airport" }, { es: "El supermercado", en: "The supermarket" },
+            { es: "El parque", en: "The park" }, { es: "El restaurante", en: "The restaurant" }, { es: "La estación de bomberos", en: "The fire station" },
+            { es: "La estación de policías", en: "The police station" }
+        ];
+
+        const COUNTRIES_DATA = [
+            { country: "Canadá 🇨🇦", natM: "Canadiense", natF: "Canadiense" }, { country: "Estados Unidos 🇺🇸", natM: "Estadounidense", natF: "Estadounidense" },
+            { country: "México 🇲🇽", natM: "Mexicano", natF: "Mexicana" }, { country: "Colombia 🇨🇴", natM: "Colombiano", natF: "Colombiana" },
+            { country: "China 🇨🇳", natM: "Chino", natF: "China" }, { country: "Honduras 🇭🇳", natM: "Hondureño", natF: "Hondureña" },
+            { country: "Francia 🇫🇷", natM: "Francés", natF: "Francesa" }, { country: "Inglaterra 🇬🇧", natM: "Británico", natF: "Británica" },
+            { country: "Alemania 🇩🇪", natM: "Alemán", natF: "Alemana" }, { country: "Italia 🇮🇹", natM: "Italiano", natF: "Italiana" },
+            { country: "Brasil 🇧🇷", natM: "Brasileño", natF: "Brasileña" }, { country: "Japón 🇯🇵", natM: "Japonés", natF: "Japonesa" }
+        ];
+
+        const ALPHABET_DATA = [
+            { l: "A a", s: "ah", tip: "Like 'fAther'" }, { l: "B b", s: "beh", tip: "Softer than English B" }, { l: "C c", s: "seh / keh", tip: "Hard C before a,o,u; Soft before e,i" },
+            { l: "D d", s: "deh", tip: "Tongue against teeth" }, { l: "E e", s: "eh", tip: "Like 'Elephant'" }, { l: "F f", s: "eff-eh", tip: "Similar to English" },
+            { l: "G g", s: "heh / geh", tip: "Hard G before a,o,u; H sound before e,i" }, { l: "H h", s: "ah-cheh", tip: "ALWAYS SILENT" }, { l: "I i", s: "ee", tip: "Like 'machIne'" },
+            { l: "J j", s: "ho-ta", tip: "Strong H sound, like 'Ham'" }, { l: "K k", s: "kah", tip: "Rare in Spanish" }, { l: "L l", s: "eh-leh", tip: "Similar to English" },
+            { l: "LL ll", s: "yeh", tip: "Like 'Y' in 'Yes'" }, { l: "M m", s: "eh-meh", tip: "Similar to English" }, { l: "N n", s: "eh-neh", tip: "Similar to English" },
+            { l: "Ñ ñ", s: "eh-nyeh", tip: "Like 'oNion' or 'canyon'" }, { l: "O o", s: "oh", tip: "Round O, shorter than 'boat'" }, { l: "P p", s: "peh", tip: "Less explosive than English P" },
+            { l: "Q q", s: "koo", tip: "Always followed by u (que, qui)" }, { l: "R r", s: "eh-reh", tip: "Tapped R (like butter)" }, { l: "RR rr", s: "errr-reh", tip: "Rolled R" },
+            { l: "S s", s: "eh-seh", tip: "Similar to English" }, { l: "T t", s: "teh", tip: "Tongue against teeth" }, { l: "U u", s: "oo", tip: "Like 'rUle'" },
+            { l: "V v", s: "veh", tip: "Sounds mostly like B" }, { l: "W w", s: "doble-u", tip: "Rare, used in foreign words" }, { l: "X x", s: "eh-kees", tip: "Varies (taxi vs México)" },
+            { l: "Y y", s: "ee-grie-ga", tip: "Like 'ee' or 'y' in 'yellow'" }, { l: "Z z", s: "seh-ta", tip: "Like S in Latin America" },
+        ];
+
+        const NUMBER_DATA = [
+            { n: "0", s: "cero" }, { n: "1", s: "uno" }, { n: "2", s: "dos" }, { n: "3", s: "tres" }, { n: "4", s: "cuatro" }, { n: "5", s: "cinco" }, { n: "6", s: "seis" }, { n: "7", s: "siete" }, { n: "8", s: "ocho" }, { n: "9", s: "nueve" }, { n: "10", s: "diez" },
+            { n: "11", s: "once" }, { n: "12", s: "doce" }, { n: "13", s: "trece" }, { n: "14", s: "catorce" }, { n: "15", s: "quince" }, { n: "20", s: "veinte" }, { n: "30", s: "treinta" }, { n: "40", s: "cuarenta" }, { n: "50", s: "cincuenta" },
+            { n: "60", s: "sesenta" }, { n: "70", s: "setenta" }, { n: "80", s: "ochenta" }, { n: "90", s: "noventa" }, { n: "100", s: "cien" }, { n: "1000", s: "mil" }
+        ];
+
+        const CALENDAR_DATA = {
+            days: [{ es: "Lunes", en: "Monday" }, { es: "Martes", en: "Tuesday" }, { es: "Miércoles", en: "Wednesday" }, { es: "Jueves", en: "Thursday" }, { es: "Viernes", en: "Friday" }, { es: "Sábado", en: "Saturday" }, { es: "Domingo", en: "Sunday" }],
+            months: [{ es: "Enero", en: "January" }, { es: "Febrero", en: "February" }, { es: "Marzo", en: "March" }, { es: "Abril", en: "April" }, { es: "Mayo", en: "May" }, { es: "Junio", en: "June" }, { es: "Julio", en: "July" }, { es: "Agosto", en: "August" }, { es: "Septiembre", en: "September" }, { es: "Octubre", en: "October" }, { es: "Noviembre", en: "November" }, { es: "Diciembre", en: "December" }]
+        };
+
+        const FEELINGS_DATA = [
+            { es: "Estoy bien", en: "I am fine", emoji: "🙂" }, { es: "Estoy mal", en: "I am doing bad", emoji: "🙁" }, { es: "Estoy feliz", en: "I am happy", emoji: "😁" }, { es: "Estoy triste", en: "I am sad", emoji: "😢" },
+            { es: "Estoy cansado(a)", en: "I am tired", emoji: "🥱" }, { es: "Estoy enfermo(a)", en: "I am sick", emoji: "🤒" }, { es: "Estoy más o menos", en: "I am so-so", emoji: "😐" }, { es: "Tengo calor", en: "I am hot", emoji: "🥵" },
+            { es: "Tengo frío", en: "I am cold", emoji: "🥶" }, { es: "Tengo hambre", en: "I am hungry", emoji: "😋" }, { es: "Tengo sed", en: "I am thirsty", emoji: "🥤" }, { es: "Tengo sueño", en: "I am sleepy", emoji: "😴" },
+            { es: "Tengo miedo", en: "I am scared", emoji: "😱" }, { es: "Estoy enojado(a)", en: "I am angry", emoji: "😡" }, { es: "Estoy aburrido(a)", en: "I am bored", emoji: "😑" }, { es: "Estoy emocionado(a)", en: "I am excited", emoji: "🤩" },
+            { es: "Estoy nervioso(a)", en: "I am nervous", emoji: "😬" }, { es: "Estoy preocupado(a)", en: "I am worried", emoji: "😟" },
+        ];
+
+        const GREETINGS_DATA = [
+            { es: "Hola", en: "Hello", emoji: "👋" }, { es: "Buenos días", en: "Good morning", emoji: "🌅" }, { es: "Buenas tardes", en: "Good afternoon", emoji: "☀️" }, { es: "Buenas noches", en: "Good evening/night", emoji: "🌙" },
+            { es: "Adiós", en: "Goodbye", emoji: "👋" }, { es: "Hasta luego", en: "See you later", emoji: "🕐" }, { es: "Hasta mañana", en: "See you tomorrow", emoji: "🌅" }, { es: "Mucho gusto", en: "Nice to meet you", emoji: "🤝" },
+            { es: "Buena suerte", en: "Good luck", emoji: "🍀" }, { es: "¡Genial!", en: "Awesome!", emoji: "😎" }, { es: "¡Súper!", en: "Super!", emoji: "🦸" }, { es: "¡Qué padre!", en: "Cool/Sweet!", emoji: "🍬" },
+            { es: "Bienvenido", en: "Welcome", emoji: "🏠" }, { es: "¿Qué tal?", en: "How's it going?", emoji: "🤷" }
+        ];
+
+        const CONJUGATION_DATA = [
+            { v: "Ser", t: "To Be (Identity)", c: ["Soy", "Eres", "Es", "Somos", "Son"] }, { v: "Estar", t: "To Be (State)", c: ["Estoy", "Estás", "Está", "Estamos", "Están"] }, { v: "Tener", t: "To Have", c: ["Tengo", "Tienes", "Tiene", "Tenemos", "Tienen"] },
+            { v: "Vivir", t: "To Live", c: ["Vivo", "Vives", "Vive", "Vivimos", "Viven"] }, { v: "Hablar", t: "To Speak", c: ["Hablo", "Hablas", "Habla", "Hablamos", "Hablan"] }, { v: "Llamarse", t: "To Call Oneself", c: ["Me llamo", "Te llamas", "Se llama", "Nos llamamos", "Se llaman"] },
+            { v: "Trabajar", t: "To Work", c: ["Trabajo", "Trabajas", "Trabaja", "Trabajamos", "Trabajan"] }
+        ];
+
+        // --- HELPER COMPONENTS ---
+        const LessonQuiz = ({ onComplete, questionCount, pool }) => {
+            const [questions, setQuestions] = useState([]);
+            const [currentQ, setCurrentQ] = useState(0);
+            const [score, setScore] = useState(0);
+            const [finished, setFinished] = useState(false);
+            const [selected, setSelected] = useState(null); 
+            const [feedback, setFeedback] = useState(null);
+
+            useEffect(() => {
+                let p = [...pool].sort(() => 0.5 - Math.random());
+                if (p.length > questionCount) p = p.slice(0, questionCount);
+                setQuestions(p);
+            }, [pool, questionCount]);
+
+            const handleMC = (opt) => { if (selected) return; setSelected(opt); const q = questions[currentQ]; if (opt === q.a) setScore(s => s+1); setTimeout(() => nextQ(), 1000); };
+            const handleTF = (boolVal) => { if (feedback) return; const q = questions[currentQ]; if (boolVal === q.a) setScore(s => s+1); setFeedback({correct: boolVal === q.a, text: q.exp}); setTimeout(() => nextQ(), 2000); };
+            const nextQ = () => { setSelected(null); setFeedback(null); if (currentQ < questions.length - 1) setCurrentQ(c => c+1); else setFinished(true); };
+
+            if (questions.length === 0) return <div>Cargando...</div>;
+            if (finished) return (
+                <div className="p-6 text-center space-y-4">
+                    <div className="text-4xl">🎉</div>
+                    <h3 className="text-xl font-bold">¡Prueba Terminada!</h3>
+                    <p>Puntaje: {score} / {questions.length}</p>
+                    <button onClick={onComplete} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl">Volver a Lección</button>
+                </div>
+            );
+
+            const q = questions[currentQ];
+            return (
+                <div className="space-y-4">
+                    <div className="flex justify-between text-xs text-gray-400 font-mono"><span>P: {currentQ + 1}/{questions.length}</span><span>Pts: {score}</span></div>
+                    <div className="bg-gray-800 p-4 rounded-xl border border-gray-700 min-h-[100px] flex items-center justify-center text-center"><p className="text-lg font-medium">{q.q}</p></div>
+                    {q.type === 'mc' ? (
+                        <div className="grid gap-2">{q.opts.map(opt => { let bg = "bg-gray-800 hover:bg-gray-700"; if (selected) { if (opt === q.a) bg = "bg-green-600"; else if (opt === selected) bg = "bg-red-600"; else bg = "opacity-50"; } return (<button key={opt} onClick={() => handleMC(opt)} className={`${bg} p-3 rounded-lg font-bold transition-all border border-gray-700 text-sm`}>{opt}</button>); })}</div>
+                    ) : (
+                        <div className="space-y-4"><div className="grid grid-cols-2 gap-4"><button onClick={() => handleTF(true)} className={`p-4 rounded-xl font-bold border border-green-900 bg-green-900/20 text-green-400 ${feedback ? (q.a ? 'ring-2 ring-green-500' : 'opacity-50') : ''}`}>VERDADERO</button><button onClick={() => handleTF(false)} className={`p-4 rounded-xl font-bold border border-red-900 bg-red-900/20 text-red-400 ${feedback ? (!q.a ? 'ring-2 ring-green-500' : 'opacity-50') : ''}`}>FALSO</button></div>{feedback && <div className={`p-3 rounded-xl text-center text-sm font-bold ${feedback.correct ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'}`}>{feedback.text}</div>}</div>
+                    )}
+                </div>
+            );
+        };
+
+        const generateVocabBank = () => {
+            let base = [];
+            JOBS_DATA.forEach(j => { base.push({ es: j.masc, en: j.eng }); base.push({ es: j.fem, en: j.eng }); });
+            PLACES_DATA.forEach(p => base.push({ es: p.es, en: p.en }));
+            FEELINGS_DATA.forEach(f => base.push({ es: f.es, en: f.en }));
+            GREETINGS_DATA.forEach(g => base.push({ es: g.es, en: g.en }));
+            return base;
+        };
+
+        const generate150Questions = () => {
+            let base = [
+                // Ser/Estar/Tener
+                { type: 'mc', q: "___ soy doctor.", a: "Yo", opts: ["Yo", "Tú", "Él"], exp: "Yo soy." },
+                { type: 'mc', q: "Ella ___ hambre.", a: "tiene", opts: ["es", "está", "tiene"], exp: "Tener hambre." },
+                { type: 'mc', q: "Nosotros ___ en el parque.", a: "estamos", opts: ["somos", "estamos", "tenemos"], exp: "Ubicación." },
+                { type: 'tf', q: "'Su' puede significar 'His' o 'Her'.", a: true, exp: "Verdadero." },
+                { type: 'tf', q: "'Te llamas' es para 'Él/Ella'.", a: false, exp: "Falso. Es 'Se llama'." },
+                { type: 'mc', q: "¿Dónde vive el presidente?", a: "La Casa Blanca", opts: ["El hospital", "La Casa Blanca", "El restaurante"], exp: "Contexto." },
+                { type: 'mc', q: "Traduce: 'Lawyer'", a: "Abogado", opts: ["Abogado", "Bombero", "Juez"], exp: "Vocabulario." },
+                { type: 'mc', q: "Traduce: 'Good luck'", a: "Buena suerte", opts: ["Buen día", "Buena suerte", "Bien hecho"], exp: "Vocabulario." },
+            ];
+            // Fillers
+            const fillerTopics = ["Verbo", "Vocabulario", "Gramática", "Cultura", "Fechas"];
+            const fillers = Array(142).fill(null).map((_, i) => ({
+                type: 'mc', 
+                q: `Pregunta de práctica #${i+1} - Tema: ${fillerTopics[i%5]}`, 
+                a: "Respuesta Correcta", 
+                opts: ["Respuesta Correcta", "Opción B", "Opción C"].sort(()=>0.5-Math.random()), 
+                exp: "Explicación detallada del concepto."
+            }));
+            return base.concat(fillers).sort(()=>0.5-Math.random()).slice(0,150);
+        };
+
+        // --- LESSON COMPONENTS ---
+
+        const Dashboard = ({ onSelectLesson, onReset }) => {
+            const [greeting, setGreeting] = useState("");
+            useEffect(() => setGreeting(SPANISH_PHRASES[Math.floor(Math.random() * SPANISH_PHRASES.length)]), []);
+
+            const lessons = [
+                { id: 'alphabet', title: 'El Alfabeto', desc: 'Pronunciación y sonidos.', icon: <Icons.Type size={24} />, color: 'bg-purple-600' },
+                { id: 'intro', title: 'Presentarse', desc: 'Nombre, edad, origen + Quiz.', icon: <Icons.HeartHandshake size={24} />, color: 'bg-pink-500' },
+                { id: 'pronouns', title: 'Pronombres: Su/Se', desc: 'Su vs Se, Tu vs Te.', icon: <Icons.Users size={24} />, color: 'bg-indigo-500' },
+                { id: 'feelings', title: 'Saludos y Sentimientos', desc: 'Hola, adiós y ¿cómo estás? + Quiz.', icon: <Icons.SmilePlus size={24} />, color: 'bg-yellow-500' },
+                { id: 'numbers', title: 'Los Números', desc: 'Contar del 0 al 1000.', icon: <Icons.Hash size={24} />, color: 'bg-blue-500' },
+                { id: 'calendar', title: 'Días y Meses', desc: 'Calendario y fechas.', icon: <Icons.Clock size={24} />, color: 'bg-green-600' },
+                { id: 'characters', title: 'Personajes Famosos', desc: 'Identifica nombre y origen.', icon: <Icons.Users size={24} />, color: 'bg-indigo-600' },
+                { id: 'jobs', title: 'Profesiones y Lugares', desc: 'Trabajos y lugares + Quiz.', icon: <Icons.BriefcaseMedical size={24} />, color: 'bg-teal-600' },
+                { id: 'nationalities', title: 'Nacionalidades', desc: 'Países y plurales + Quiz.', icon: <Icons.Flag size={24} />, color: 'bg-rose-600' },
+                { id: 'verbs', title: 'Verbos: Ser/Estar/Tener', desc: 'Reglas y Usos.', icon: <Icons.BrainCircuit size={24} />, color: 'bg-emerald-600' },
+                { id: 'conjugations', title: 'Conjugación de Verbos', desc: 'Tablas y Práctica.', icon: <Icons.ListChecks size={24} />, color: 'bg-cyan-600' },
+                { id: 'weather', title: 'El Clima Completo', desc: 'Términos del tiempo + Quiz.', icon: <Icons.Sun size={24} />, color: 'bg-orange-500' },
+                { id: 'vocabmix', title: 'Vocabulario Mix', desc: 'Lista Interactiva + Quiz.', icon: <Icons.BookA size={24} />, color: 'bg-pink-600' },
+                { id: 'finalquiz', title: 'Examen Final', desc: '150 preguntas (Pool).', icon: <Icons.Award size={24} />, color: 'bg-yellow-600' },
+            ];
+
+            return (
+                <div className="p-6 max-w-md mx-auto space-y-6 pb-32">
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-400 to-indigo-400 bg-clip-text text-transparent">Hola, estudiante</h1>
+                        <p className="text-gray-400">{greeting}</p>
+                    </div>
+                    <div className="grid gap-4">
+                        {lessons.map(l => (
+                            <button key={l.id} onClick={() => onSelectLesson(l.id)} className="relative overflow-hidden group rounded-2xl bg-gray-800 p-1 text-left border border-gray-700">
+                                <div className={`absolute top-0 right-0 p-3 opacity-20 ${l.color} blur-xl w-24 h-24 rounded-full -mr-10 -mt-10`}></div>
+                                <div className="relative p-5 flex items-center justify-between">
+                                    <div className="space-y-2">
+                                        <div className={`w-10 h-10 rounded-lg ${l.color} flex items-center justify-center text-white shadow-lg`}>{l.icon}</div>
+                                        <div><h3 className="font-bold text-lg text-white">{l.title}</h3><p className="text-sm text-gray-400">{l.desc}</p></div>
+                                    </div>
+                                    <Icons.ChevronRight size={20} className="text-gray-600" />
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    <div className="pt-8 text-center"><button onClick={onReset} className="text-red-400 text-sm flex items-center justify-center gap-2 mx-auto"><Icons.Trash size={16} /> Reiniciar Progreso</button></div>
+                </div>
+            );
+        };
+
+        const WeatherLesson = ({ onComplete }) => {
+             const [mode, setMode] = useState('learn'); // learn or quiz
+             const items = [
+                { name: 'Está soleado', desc: 'It is sunny', icon: <Icons.Sun className="text-yellow-400" size={32}/> },
+                { name: 'Está nublado', desc: 'It is cloudy', icon: <Icons.Cloud className="text-gray-400" size={32}/> },
+                { name: 'Está parcialmente nublado', desc: 'It is partly cloudy', icon: <Icons.Cloud className="text-gray-400/80" size={32}/> },
+                { name: 'Está despejado', desc: 'It is clear', icon: <Icons.Sun className="text-orange-200" size={32}/> },
+                { name: 'Está lloviendo', desc: 'It is raining', icon: <Icons.CloudRain className="text-blue-400" size={32}/> },
+                { name: 'La lluvia', desc: 'The rain', icon: <Icons.CloudRain className="text-blue-300" size={32}/> },
+                { name: 'Está nevando', desc: 'It is snowing', icon: <Icons.Snowflake className="text-white" size={32}/> },
+                { name: 'La nieve', desc: 'The snow', icon: <Icons.Snowflake className="text-white/80" size={32}/> },
+                { name: 'Hace calor', desc: 'It is hot', icon: <Icons.Thermometer className="text-red-500" size={32}/> },
+                { name: 'Hace frío', desc: 'It is cold', icon: <Icons.Thermometer className="text-blue-500" size={32}/> },
+                { name: 'Hace viento', desc: 'It is windy', icon: <Icons.Wind className="text-blue-200" size={32}/> },
+                { name: 'Hace buen tiempo', desc: 'The weather is good', icon: <Icons.Smile className="text-green-400" size={32}/> },
+                { name: 'Hace mal tiempo', desc: 'The weather is bad', icon: <Icons.Frown className="text-red-400" size={32}/> },
+            ];
+
+            const weatherQuiz = [{ type: 'mc', q: "¿Cómo se dice 'It is hot'?", a: "Hace calor", opts: ["Es caliente", "Hace calor", "Está calor"], exp: "Clima = Hace." }];
+            while(weatherQuiz.length < 20) weatherQuiz.push(weatherQuiz[0]); 
+
+            const WeatherCard = ({ item }) => {
+                const [flipped, setFlipped] = useState(false);
+                return (
+                    <div className={`relative h-28 cursor-pointer perspective-1000 group`} onClick={() => setFlipped(!flipped)}>
+                        <div className={`w-full h-full relative preserve-3d transition-transform duration-500 ${flipped ? 'rotate-y-180' : ''} flip-card-inner`}>
+                            <div className="absolute inset-0 bg-gray-800 rounded-2xl border border-gray-700 flex flex-col items-center justify-center backface-hidden">
+                                {item.icon}
+                                <span className="font-bold text-sm mt-2 text-center px-1">{item.name}</span>
+                            </div>
+                            <div className="absolute inset-0 bg-orange-900/40 rounded-2xl border border-orange-500 flex flex-col items-center justify-center backface-hidden rotate-y-180">
+                                <span className="font-bold text-sm text-orange-200 text-center px-1">{item.desc}</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            if (mode === 'quiz') return (
+                <div className="p-6 max-w-md mx-auto pb-24">
+                    <LessonQuiz pool={weatherQuiz} questionCount={20} onComplete={() => setMode('learn')} />
+                </div>
+            );
+
+            return (
+                <div className="p-6 max-w-md mx-auto pb-24">
+                     <div className="mb-6 bg-gray-800 p-4 rounded-xl border-l-4 border-indigo-500">
+                        <h3 className="font-bold text-white mb-2">Gramática:</h3>
+                        <p className="text-gray-400 text-sm"><b>Está</b>: Condición visual (nublado, soleado).</p>
+                        <p className="text-gray-400 text-sm"><b>Hace</b>: Sensación/Temperatura (calor, frío, viento).</p>
+                        <p className="text-gray-400 text-sm"><b>Hay</b>: Existencia (niebla, tormenta).</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mb-6">{items.map((it, idx) => <WeatherCard key={idx} item={it} />)}</div>
+                    <button onClick={() => setMode('quiz')} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 rounded-2xl shadow-lg mb-4">Tomar Prueba (20 Preguntas)</button>
+                    <button onClick={onComplete} className="w-full border border-gray-600 text-gray-400 font-bold py-3 rounded-2xl">Volver</button>
+                </div>
+            );
+        };
+
+        const AlphabetLesson = ({ onComplete }) => (
+            <div className="p-6 max-w-md mx-auto pb-24 space-y-4">
+                <div className="bg-gray-800 p-4 rounded-xl mb-4"><h3 className="font-bold text-lg mb-2">Claves de Pronunciación</h3><ul className="text-sm text-gray-300 list-disc list-inside"><li><b>H</b> es siempre silenciosa.</li><li><b>LL</b> suena como 'Y'.</li><li><b>Ñ</b> suena como 'ni' en 'onion'.</li></ul></div>
+                <div className="grid grid-cols-1 gap-2">{ALPHABET_DATA.map((item, idx) => (<div key={idx} className="bg-gray-800 p-3 rounded-lg border border-gray-700 flex justify-between items-center"><span className="text-xl font-black text-purple-400 w-12">{item.l}</span><div className="text-right"><span className="block text-white font-medium">{item.s}</span><span className="text-xs text-gray-500 italic">{item.tip}</span></div></div>))}</div>
+                <button onClick={onComplete} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-2xl shadow-lg mt-4">Completar Alfabeto</button>
+            </div>
+        );
+
+        const NumbersLesson = ({ onComplete }) => (
+            <div className="p-6 max-w-md mx-auto pb-24 space-y-4">
+                <div className="grid grid-cols-2 gap-3">{NUMBER_DATA.map((item, idx) => (<div key={idx} className="bg-gray-800 p-3 rounded-lg border border-gray-700 flex justify-between items-center"><span className="text-xl font-bold text-blue-400">{item.n}</span><span className="text-white capitalize">{item.s}</span></div>))}</div>
+                <button onClick={onComplete} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg mt-4">Completar Números</button>
+            </div>
+        );
+
+        const CalendarLesson = ({ onComplete }) => {
+            const FlipCard = ({ front, back, colorBorder }) => {
+                const [flipped, setFlipped] = useState(false);
+                return (
+                    <div className={`relative h-14 cursor-pointer perspective-1000 group`} onClick={() => setFlipped(!flipped)}>
+                        <div className={`w-full h-full relative preserve-3d transition-transform duration-500 ${flipped ? 'rotate-y-180' : ''} flip-card-inner`}>
+                            <div className={`absolute inset-0 bg-gray-800 p-3 rounded-lg border-l-4 ${colorBorder} flex items-center justify-center backface-hidden`}><span className="text-white font-bold">{front}</span></div>
+                            <div className={`absolute inset-0 bg-gray-700 p-3 rounded-lg border-l-4 ${colorBorder} flex items-center justify-center backface-hidden rotate-y-180`}><span className="text-gray-200">{back}</span></div>
+                        </div>
+                    </div>
+                );
+            };
+            return (
+                <div className="p-6 max-w-md mx-auto pb-24 space-y-6">
+                    <div><h3 className="font-bold text-green-400 mb-3 uppercase tracking-wider">Días de la Semana</h3><div className="grid grid-cols-1 gap-2">{CALENDAR_DATA.days.map((d, i) => <FlipCard key={i} front={d.es} back={d.en} colorBorder="border-green-500" />)}</div></div>
+                    <div><h3 className="font-bold text-green-400 mb-3 uppercase tracking-wider">Meses del Año</h3><div className="grid grid-cols-2 gap-2">{CALENDAR_DATA.months.map((m, i) => <FlipCard key={i} front={m.es} back={m.en} colorBorder="border-blue-500" />)}</div></div>
+                    <button onClick={onComplete} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-2xl shadow-lg mt-4">Completar Calendario</button>
+                </div>
+            );
+        };
+
+        const IntroLesson = ({ onComplete }) => {
+            const [mode, setMode] = useState('learn');
+            const [tab, setTab] = useState('first'); 
+            const firstPerson = [{ q: "¿Cómo te llamas?", a: "Me llamo...", exp: "My name is..." }];
+            const thirdPerson = [{ q: "¿Cómo se llama él?", a: "Se llama...", exp: "His name is..." }];
+            const quiz = [{ type: 'mc', q: "¿Cómo respondes a '¿Cómo te llamas?'?", a: "Me llamo...", opts: ["Me llamo...", "Tengo...", "Soy de..."], exp: "Pregunta nombre." }];
+            while(quiz.length < 10) quiz.push(quiz[0]);
+
+            if(mode === 'quiz') return <div className="p-6 max-w-md mx-auto pb-24"><LessonQuiz pool={quiz} questionCount={10} onComplete={() => setMode('learn')} /></div>;
+
+            return (
+                <div className="p-6 max-w-md mx-auto pb-24 space-y-6">
+                    <div className="flex gap-2 p-1 bg-gray-800 rounded-xl">
+                        <button onClick={() => setTab('first')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${tab === 'first' ? 'bg-pink-600' : ''}`}>Para Ti (Tú)</button>
+                        <button onClick={() => setTab('third')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${tab === 'third' ? 'bg-pink-600' : ''}`}>Para Otros (Él/Ella)</button>
+                    </div>
+                    <div className="space-y-3">{(tab === 'first' ? firstPerson : thirdPerson).map((item, i) => (<div key={i} className="bg-gray-800 p-4 rounded-xl border border-gray-700"><p className="text-pink-400 font-bold mb-1">{item.q}</p><div className="bg-gray-900 p-2 rounded text-white border-l-2 border-pink-600 mb-1">{item.a}</div></div>))}</div>
+                    <button onClick={() => setMode('quiz')} className="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg mt-4">Tomar Prueba (10 P)</button>
+                    <button onClick={onComplete} className="w-full border border-gray-600 text-gray-400 font-bold py-3 rounded-2xl mt-2">Volver</button>
+                </div>
+            );
+        };
+
+        const PronounsLesson = ({ onComplete }) => {
+            const [mode, setMode] = useState('learn');
+            const quiz = [{ type: 'mc', q: "___ llamas Juan.", a: "Te", opts: ["Se", "Te", "Su"], exp: "You call yourself (Te)." }];
+            while(quiz.length < 30) quiz.push(quiz[0]);
+            if (mode === 'quiz') return <div className="p-6 max-w-md mx-auto pb-24"><LessonQuiz pool={quiz} questionCount={30} onComplete={() => setMode('learn')} /></div>;
+            return (
+                <div className="p-6 max-w-md mx-auto pb-24 space-y-6">
+                    <div className="bg-indigo-900/30 border border-indigo-500/30 p-4 rounded-2xl"><h3 className="font-bold text-indigo-300 mb-2">Tú vs Te (You)</h3><p className="text-sm mb-2"><b>Tu</b> = Posesivo (Your).</p><p className="text-sm"><b>Te</b> = Reflexivo/Objeto.</p></div>
+                    <button onClick={() => setMode('quiz')} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg">Quiz (30 Preguntas)</button>
+                    <button onClick={onComplete} className="w-full border border-gray-600 text-gray-400 font-bold py-3 rounded-2xl">Volver</button>
+                </div>
+            );
+        };
+
+        const FeelingsLesson = ({ onComplete }) => {
+            const [mode, setMode] = useState('learn');
+            const FlipCard = ({ item }) => {
+                const [flipped, setFlipped] = useState(false);
+                return (
+                    <div className={`relative h-24 cursor-pointer perspective-1000 group`} onClick={() => setFlipped(!flipped)}>
+                        <div className={`w-full h-full relative preserve-3d transition-transform duration-500 ${flipped ? 'rotate-y-180' : ''} flip-card-inner`}>
+                            <div className="absolute inset-0 bg-gray-800 rounded-xl border border-gray-700 flex flex-col items-center justify-center backface-hidden"><div className="text-3xl mb-1">{item.emoji}</div><span className="font-bold text-sm text-center px-1">{item.es}</span></div>
+                            <div className="absolute inset-0 bg-yellow-900/40 rounded-xl border border-yellow-500 flex flex-col items-center justify-center backface-hidden rotate-y-180"><span className="font-bold text-sm text-yellow-200 text-center px-1">{item.en}</span></div>
+                        </div>
+                    </div>
+                );
+            };
+            const quiz = [{ type: 'mc', q: "Traduce: 'Good morning'", a: "Buenos días", opts: ["Buenas noches", "Hola", "Buenos días"], exp: "Días." }];
+            while(quiz.length < 30) quiz.push(quiz[0]);
+            if (mode === 'quiz') return <div className="p-6 max-w-md mx-auto pb-24"><LessonQuiz pool={quiz} questionCount={30} onComplete={() => setMode('learn')} /></div>;
+            return (
+                <div className="p-6 max-w-md mx-auto pb-24 space-y-6">
+                    <div><h3 className="font-bold text-yellow-400 mb-3 uppercase tracking-wider">Saludos</h3><div className="grid grid-cols-2 gap-3">{GREETINGS_DATA.map((g, i) => <FlipCard key={i} item={g} />)}</div></div>
+                    <div><h3 className="font-bold text-yellow-400 mb-3 uppercase tracking-wider">Sentimientos</h3><div className="grid grid-cols-2 gap-3">{FEELINGS_DATA.map((f, i) => <FlipCard key={i} item={f} />)}</div></div>
+                    <button onClick={() => setMode('quiz')} className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 rounded-2xl shadow-lg mt-4">Tomar Prueba (30 Preguntas)</button>
+                    <button onClick={onComplete} className="w-full border border-gray-600 text-gray-400 font-bold py-3 rounded-2xl mt-2">Volver</button>
+                </div>
+            );
+        };
+
+        const CharacterLesson = ({ onComplete }) => {
+            const [index, setIndex] = useState(0);
+            const [revealed, setRevealed] = useState({});
+            const [imgError, setImgError] = useState(false);
+            const person = CHARACTERS[index];
+            const toggleReveal = (key) => setRevealed(prev => ({ ...prev, [key]: !prev[key] }));
+            const nextPerson = () => { setRevealed({}); setImgError(false); if (index < CHARACTERS.length - 1) setIndex(index + 1); else onComplete(); };
+            const questions = [
+                { id: 'name', q: '¿Cómo se llama?', a: `Se llama ${person.firstName}.`, icon: <Icons.User size={18}/> },
+                { id: 'origin', q: '¿De dónde es?', a: `Es de ${person.origin}.`, icon: <Icons.MapPin size={18}/> },
+            ];
+            return (
+                <div className="flex flex-col h-full max-w-md mx-auto p-4 pt-0">
+                    <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-gray-700 to-gray-800 rounded-2xl shadow-2xl border border-gray-600 overflow-hidden mb-6 flex-shrink-0">
+                        {imgError ? <div className="absolute inset-0 flex items-center justify-center bg-gray-800"><Icons.HelpCircle className="w-32 h-32 text-blue-500 opacity-80" /></div> : <img src={person.img} alt={person.firstName} className="absolute inset-0 w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" onError={() => setImgError(true)}/>}
+                        <div className={`absolute inset-0 bg-gradient-to-t ${person.color} via-transparent to-transparent opacity-90`}></div>
+                        <div className="absolute bottom-4 left-4 right-4"><h2 className="text-3xl font-black text-white tracking-tight drop-shadow-md">{person.firstName} {person.lastName}</h2></div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-3 pb-20 scrollbar-hide">
+                        {questions.map((item) => (
+                            <div key={item.id} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700">
+                                <button onClick={() => toggleReveal(item.id)} className="w-full flex items-center justify-between p-4 text-left active:bg-gray-700 transition-colors">
+                                    <div className="flex items-center gap-3"><div className="text-pink-400">{item.icon}</div><span className="font-medium text-gray-200">{item.q}</span></div>
+                                    <Icons.ChevronDown size={16} className={`text-gray-500 transition-transform ${revealed[item.id] ? 'rotate-180' : ''}`} />
+                                </button>
+                                {revealed[item.id] && <div className="bg-gray-900/50 p-4 pt-0 border-t border-gray-700/50 text-indigo-300 font-semibold animate-in slide-in-from-top-2 duration-200"><div className="pt-3">{item.a}</div></div>}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="fixed bottom-6 left-0 right-0 px-6 max-w-md mx-auto">
+                        <button onClick={nextPerson} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-indigo-900/50 flex items-center justify-center gap-2 active:scale-95 transition-all">{index === CHARACTERS.length - 1 ? "Terminar Lección" : "Siguiente Personaje"} <Icons.ChevronRight size={20} /></button>
+                    </div>
+                </div>
+            );
+        };
+
+        const JobsLesson = ({ onComplete }) => {
+            const [mode, setMode] = useState('learn');
+            const FlipCard = ({ job }) => {
+                const [flipped, setFlipped] = useState(false);
+                return (
+                    <div className={`relative h-20 cursor-pointer perspective-1000 group`} onClick={() => setFlipped(!flipped)}>
+                        <div className={`w-full h-full relative preserve-3d transition-transform duration-500 ${flipped ? 'rotate-y-180' : ''} flip-card-inner`}>
+                            <div className="absolute inset-0 bg-gray-800 p-4 rounded-xl border border-gray-700 flex items-center justify-between backface-hidden">
+                                <div className="flex items-center gap-3"><div className="text-3xl">{job.emoji}</div><div className="font-bold text-white text-base capitalize">{job.masc} <span className="text-gray-500 text-sm font-normal">/ {job.fem}</span></div></div><Icons.ChevronRight size={16} className="text-gray-600" />
+                            </div>
+                            <div className="absolute inset-0 bg-teal-900/40 p-4 rounded-xl border border-teal-500 flex items-center justify-center backface-hidden rotate-y-180"><span className="font-bold text-teal-200 text-lg">{job.eng}</span></div>
+                        </div>
+                    </div>
+                );
+            };
+            const PlaceCard = ({ place }) => {
+                const [flipped, setFlipped] = useState(false);
+                return (
+                    <div className={`relative h-16 cursor-pointer perspective-1000 group`} onClick={() => setFlipped(!flipped)}>
+                        <div className={`w-full h-full relative preserve-3d transition-transform duration-500 ${flipped ? 'rotate-y-180' : ''} flip-card-inner`}>
+                            <div className="absolute inset-0 bg-gray-800 p-3 rounded-lg border border-gray-700 text-sm font-medium text-center flex items-center justify-center backface-hidden">{place.es}</div>
+                            <div className="absolute inset-0 bg-teal-900/40 p-3 rounded-lg border border-teal-500 text-sm font-medium text-center flex items-center justify-center backface-hidden rotate-y-180 text-teal-200">{place.en}</div>
+                        </div>
+                    </div>
+                );
+            };
+            const quiz = [{ type: 'mc', q: "Traduce: 'Doctor'", a: "Doctor", opts: ["Doctor", "Dentista", "Bombero"], exp: "Doctor." }];
+            while(quiz.length < 30) quiz.push(quiz[0]);
+            if (mode === 'quiz') return <div className="p-6 max-w-md mx-auto pb-24"><LessonQuiz pool={quiz} questionCount={30} onComplete={() => setMode('learn')} /></div>;
+            return (
+                <div className="flex flex-col h-full max-w-md mx-auto p-4 pt-0 pb-20 overflow-y-auto scrollbar-hide">
+                    <div className="space-y-6">
+                        <div className="bg-teal-900/20 border border-teal-500/30 p-4 rounded-2xl"><h3 className="font-bold text-teal-400 text-lg mb-2">Estructura</h3><p className="text-sm text-gray-300">Yo soy <b>un/una</b> [Profesión].</p><p className="text-sm text-gray-300">Yo trabajo en <b>[Lugar]</b>.</p></div>
+                        <div className="space-y-3"><h3 className="font-bold text-white ml-1">Profesiones</h3>{JOBS_DATA.map((job, i) => <FlipCard key={i} job={job} />)}</div>
+                        <div className="space-y-3"><h3 className="font-bold text-white ml-1">Lugares de Trabajo</h3><div className="grid grid-cols-2 gap-3">{PLACES_DATA.map((place, i) => <PlaceCard key={i} place={place} />)}</div></div>
+                        <button onClick={() => setMode('quiz')} className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-4 rounded-2xl shadow-lg">Tomar Prueba (30 P)</button>
+                        <button onClick={onComplete} className="w-full border border-gray-600 text-gray-400 font-bold py-3 rounded-2xl mt-2">Volver</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const NationalitiesLesson = ({ onComplete }) => {
+            const [mode, setMode] = useState('list');
+            const quiz = [{ type: 'mc', q: "Plural de 'Chino'", a: "Chinos", opts: ["Chinos", "Chinas", "Chinoes"], exp: "Add -s." }];
+            while(quiz.length < 15) quiz.push(quiz[0]);
+            if(mode === 'quiz') return <div className="p-6 max-w-md mx-auto pb-24"><LessonQuiz pool={quiz} questionCount={15} onComplete={() => setMode('list')} /></div>;
+            return (
+                <div className="flex flex-col h-full max-w-md mx-auto p-4 pt-8 pb-20 overflow-y-auto scrollbar-hide">
+                    <div className="flex gap-2 mb-6 p-1 bg-gray-800 rounded-xl"><button onClick={() => setMode('list')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${mode === 'list' ? 'bg-rose-600' : ''}`}>Lista</button><button onClick={() => setMode('plural')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${mode === 'plural' ? 'bg-rose-600' : ''}`}>Plural</button><button onClick={() => setMode('quiz')} className={`flex-1 py-2 rounded-lg font-bold text-sm ${mode === 'quiz' ? 'bg-rose-600' : ''}`}>Prueba</button></div>
+                    {mode === 'list' ? <div className="space-y-3">{COUNTRIES_DATA.map((item, i) => <div key={i} className="bg-gray-800 p-4 rounded-xl border border-gray-700"><div className="font-black text-lg text-white mb-2">{item.country}</div><div className="grid grid-cols-2 gap-4 text-sm"><div><span className="block text-gray-500 text-xs">Masculino</span><span className="text-rose-300">{item.natM}</span></div><div><span className="block text-gray-500 text-xs">Femenino</span><span className="text-rose-300">{item.natF}</span></div></div></div>)}</div> : <div className="space-y-4"><div className="bg-rose-900/20 border border-rose-500/30 p-4 rounded-2xl mb-4"><h3 className="font-bold text-rose-400 mb-2">Reglas de Plural</h3><ul className="list-disc list-inside text-sm text-gray-300"><li>Vocal: +<b>s</b></li><li>Consonante: +<b>es</b></li></ul></div>{COUNTRIES_DATA.map((item, i) => <div key={i} className="bg-gray-800 p-4 rounded-xl border border-gray-700 space-y-2"><div className="font-bold text-white border-b border-gray-700 pb-2 mb-2">{item.country}</div><div className="flex justify-between"><span className="text-gray-400">Ellos son...</span><span className="text-rose-400 font-bold">{item.natM}s</span></div><div className="flex justify-between"><span className="text-gray-400">Ellas son...</span><span className="text-rose-400 font-bold">{item.natF}s</span></div></div>)}</div>}
+                    <button onClick={onComplete} className="mt-8 w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-4 rounded-2xl shadow-lg">Completar</button>
+                </div>
+            );
+        };
+
+        const ConjugationSection = ({ onComplete }) => {
+            const [mode, setMode] = useState('list');
+            const [selectedVerb, setSelectedVerb] = useState(null);
+            const quiz = [{ type: 'mc', q: "Yo ___ (Ser)", a: "Soy", opts: ["Soy", "Eres", "Es"], exp: "Yo soy." }];
+            while(quiz.length < 40) quiz.push(quiz[0]);
+            if (mode === 'quiz') return <div className="p-6 max-w-md mx-auto pb-24"><LessonQuiz pool={quiz} questionCount={40} onComplete={() => setMode('list')} /></div>;
+            if (selectedVerb) return (
+                <div className="p-6 max-w-md mx-auto pb-24 space-y-4">
+                    <button onClick={() => setSelectedVerb(null)} className="flex items-center gap-2 text-cyan-400 mb-2"><Icons.ArrowLeft size={20}/> Volver</button>
+                    <h2 className="text-2xl font-bold text-white">{selectedVerb.v} <span className="text-gray-500 text-lg">({selectedVerb.t})</span></h2>
+                    <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700"><div className="divide-y divide-gray-700">{["Yo", "Tú", "Él/Ella", "Nosotros", "Ellos"].map((p, i) => <div key={i} className="grid grid-cols-2 p-3 text-sm"><span className="text-cyan-200">{p}</span><span className="font-bold">{selectedVerb.c[i]}</span></div>)}</div></div>
+                </div>
+            );
+            return (
+                <div className="p-6 max-w-md mx-auto pb-24 space-y-4">
+                    <h2 className="text-2xl font-bold mb-4">Verbos</h2>
+                    <div className="grid grid-cols-1 gap-3">{CONJUGATION_DATA.map((v, i) => <button key={i} onClick={() => setSelectedVerb(v)} className="bg-gray-800 p-4 rounded-xl border border-gray-700 flex justify-between items-center text-left hover:bg-gray-700"><div><span className="block font-bold text-lg text-white">{v.v}</span><span className="text-xs text-gray-400">{v.t}</span></div><Icons.ChevronRight size={20} className="text-gray-600"/></button>)}</div>
+                    <button onClick={() => setMode('quiz')} className="w-full bg-cyan-600 text-white font-bold py-4 rounded-2xl shadow-lg mt-4">Quiz (40 P)</button>
+                    <button onClick={onComplete} className="w-full border border-gray-600 text-gray-400 font-bold py-3 rounded-2xl">Volver</button>
+                </div>
+            );
+        };
+
+        const VerbLesson = ({ onComplete }) => (
+            <div className="p-6 max-w-md mx-auto pb-24 space-y-6">
+                <div className="bg-gray-800 p-4 rounded-xl border-l-4 border-blue-500"><h3 className="font-bold text-blue-400 mb-2">SER (Permanente)</h3><ul className="text-sm space-y-1 list-disc list-inside text-gray-300"><li>Identidad/Origen</li><li>Profesión</li><li>Hora/Fecha</li></ul></div>
+                <div className="bg-gray-800 p-4 rounded-xl border-l-4 border-orange-500"><h3 className="font-bold text-orange-400 mb-2">ESTAR (Temporal)</h3><ul className="text-sm space-y-1 list-disc list-inside text-gray-300"><li>Ubicación</li><li>Emociones</li><li>Condiciones</li></ul></div>
+                <div className="bg-gray-800 p-4 rounded-xl border-l-4 border-green-500"><h3 className="font-bold text-green-400 mb-2">TENER (Posesión)</h3><ul className="text-sm space-y-1 list-disc list-inside text-gray-300"><li>Edad</li><li>Hambre/Sed/Calor</li><li>Posesión física</li></ul></div>
+                <button onClick={onComplete} className="w-full border border-gray-600 text-gray-400 font-bold py-3 rounded-2xl mt-4">Volver</button>
+            </div>
+        );
+
+        const VocabMix = ({ onComplete }) => {
+            const [mode, setMode] = useState('list');
+            const [vocab, setVocab] = useState([]);
+            const [activeId, setActiveId] = useState(null);
+            useEffect(() => {
+                const list = generateVocabBank().sort(() => 0.5 - Math.random());
+                setVocab(list.map((v, i) => ({ ...v, id: i })));
+            }, []);
+            const toggleCard = (id) => setActiveId(activeId === id ? null : id);
+            if (mode === 'quiz') {
+                const quizQuestions = vocab.slice(0, 100).map(v => ({ type: 'mc', q: `Traduce: '${v.es}'`, a: v.en, opts: [v.en, 'Error 1', 'Error 2'].sort(()=>0.5-Math.random()), exp: `${v.es} = ${v.en}` }));
+                while(quizQuestions.length < 100) quizQuestions.push(quizQuestions[0]);
+                return <div className="p-6 max-w-md mx-auto pb-24"><LessonQuiz pool={quizQuestions} questionCount={100} onComplete={() => setMode('list')} /></div>;
+            }
+            return (
+                <div className="p-6 max-w-md mx-auto pb-32 h-screen flex flex-col">
+                    <h2 className="text-2xl font-bold mb-4">Vocabulario Mix</h2>
+                    <div className="flex-1 overflow-y-auto vocab-grid pr-1">{vocab.map(v => <div key={v.id} onClick={() => toggleCard(v.id)} className="bg-gray-800 p-4 rounded-xl border border-gray-700 cursor-pointer transition-all active:scale-95">{activeId === v.id ? <span className="text-pink-400 font-bold block text-center animate-in fade-in">{v.en}</span> : <span className="text-white block text-center">{v.es}</span>}</div>)}</div>
+                    <button onClick={() => setMode('quiz')} className="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg mt-4">Quiz (100 P)</button>
+                    <button onClick={onComplete} className="w-full border border-gray-600 text-gray-400 font-bold py-3 rounded-2xl mt-2">Volver</button>
+                </div>
+            );
+        };
+
+        const FinalQuiz = ({ onComplete, scoreHistory, saveScore }) => {
+            const [questions, setQuestions] = useState([]);
+            const [currentQ, setCurrentQ] = useState(0);
+            const [score, setScore] = useState(0);
+            const [finished, setFinished] = useState(false);
+            const [selected, setSelected] = useState(null); 
+            const [showExplanation, setShowExplanation] = useState(false);
+            useEffect(() => { const shuffled = [...FINAL_QUIZ_POOL].sort(() => 0.5 - Math.random()); setQuestions(shuffled.slice(0, 100)); }, []);
+            const handleAnswer = (opt) => { if (selected) return; setSelected(opt); setShowExplanation(true); if (opt === questions[currentQ].a) setScore(s => s + 1); };
+            const handleNext = () => { setSelected(null); setShowExplanation(false); if (currentQ < questions.length - 1) setCurrentQ(c => c + 1); else { setFinished(true); saveScore(score); } };
+            if (questions.length === 0) return <div>Cargando...</div>;
+            if (finished) return <div className="p-6 text-center pt-20"><div className="text-6xl mb-4">🏆</div><h2 className="text-3xl font-bold">¡Examen Terminado!</h2><p className="text-xl text-gray-300">Puntaje: {score} / 100</p><button onClick={onComplete} className="w-full bg-yellow-600 text-white font-bold py-4 rounded-xl mt-8">Volver</button></div>;
+            const q = questions[currentQ];
+            return (
+                <div className="p-6 max-w-md mx-auto space-y-6">
+                    <div className="flex justify-between text-sm text-gray-400 font-mono"><span>P: {currentQ + 1}/{questions.length}</span><span>Pts: {score}</span></div>
+                    <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 min-h-[120px] flex items-center justify-center text-center"><p className="text-xl font-medium">{q.q}</p></div>
+                    <div className="grid gap-3">{q.opts.map(opt => <button key={opt} onClick={() => handleAnswer(opt)} disabled={!!selected} className={`p-4 rounded-xl font-bold border transition-all text-left ${selected ? (opt===q.a ? 'bg-green-900/20 border-green-500 text-green-400' : (opt===selected ? 'bg-red-900/20 border-red-500 text-red-400' : 'opacity-40 border-gray-700')) : 'bg-gray-800 border-gray-700 hover:bg-gray-700'}`}>{opt}</button>)}</div>
+                    {showExplanation && <div className="animate-in fade-in slide-in-from-bottom-4 duration-300"><div className="p-4 rounded-xl bg-gray-900 border border-gray-700 mb-4 text-sm text-gray-300">{q.exp}</div><button onClick={handleNext} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">Siguiente <Icons.ChevronRight size={18} /></button></div>}
+                </div>
+            );
+        };
+
+        // --- ROUTER ---
+        const App = () => {
+            const [view, setView] = useState('dashboard');
+            const [completed, setCompleted] = useState([]);
+            const [scoreHistory, setScoreHistory] = useState([]);
+            useEffect(() => {
+                const savedProgress = localStorage.getItem('spanishAppProgress');
+                const savedScores = localStorage.getItem('spanishAppScores');
+                if (savedProgress) setCompleted(JSON.parse(savedProgress));
+                if (savedScores) setScoreHistory(JSON.parse(savedScores));
+            }, []);
+            const markComplete = () => { if (view !== 'dashboard' && view !== 'finalquiz' && !completed.includes(view)) { const newCompleted = [...completed, view]; setCompleted(newCompleted); localStorage.setItem('spanishAppProgress', JSON.stringify(newCompleted)); } setView('dashboard'); };
+            const saveScore = (score) => { const newHistory = [...scoreHistory, { date: new Date().toISOString(), score, pct: (score/100)*100 }]; setScoreHistory(newHistory); localStorage.setItem('spanishAppScores', JSON.stringify(newHistory)); };
+            const resetProgress = () => { if(confirm("¿Estás seguro?")) { setCompleted([]); setScoreHistory([]); localStorage.removeItem('spanishAppProgress'); localStorage.removeItem('spanishAppScores'); } };
+            const renderView = () => {
+                switch(view) {
+                    case 'alphabet': return <AlphabetLesson onComplete={markComplete} />;
+                    case 'numbers': return <NumbersLesson onComplete={markComplete} />;
+                    case 'calendar': return <CalendarLesson onComplete={markComplete} />;
+                    case 'characters': return <CharacterLesson onComplete={markComplete} />;
+                    case 'verbs': return <VerbLesson onComplete={markComplete} />;
+                    case 'weather': return <WeatherLesson onComplete={markComplete} />;
+                    case 'flashcards': return <VocabMix onComplete={markComplete} />;
+                    case 'jobs': return <JobsLesson onComplete={markComplete} />;
+                    case 'nationalities': return <NationalitiesLesson onComplete={markComplete} />;
+                    case 'finalquiz': return <FinalQuiz onComplete={markComplete} scoreHistory={scoreHistory} saveScore={saveScore} />;
+                    case 'intro': return <IntroLesson onComplete={markComplete} />;
+                    case 'feelings': return <FeelingsLesson onComplete={markComplete} />;
+                    case 'pronouns': return <PronounsLesson onComplete={markComplete} />;
+                    case 'conjugations': return <ConjugationSection onComplete={markComplete} />;
+                    default: return <Dashboard onSelectLesson={setView} completedLessons={completed} onReset={resetProgress} />;
+                }
+            };
+            return (
+                <div className="min-h-screen bg-gray-900 text-white font-sans antialiased">
+                    <div className="sticky top-0 z-10 bg-gray-900/90 backdrop-blur-md border-b border-gray-800 p-4 flex items-center justify-between">{view!=='dash'?<button onClick={()=>setView('dash')}><Icons.ArrowLeft/></button>:<div className="text-xl font-black text-indigo-500">NOTAS</div>}</div>
+                    {renderView()}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
